@@ -1,0 +1,20 @@
+META:
+  - 
+    path: '/HOME/scz0p9e/run/hexiangdong/vla/data_gen/vqa_tasks_folder/joint_3d_rec_tasks_train_144149.json'
+    type: 'image_depth_text'
+
+  -
+    path: '/HOME/scz0p9e/run/hexiangdong/vla/data_gen/vqa_tasks_folder/single_link_3d_close_move_step_train_144149.json'
+    type: 'image_depth_text'
+
+  - path: '/HOME/scz0p9e/run/hexiangdong/vla/data_gen/vqa_tasks_folder/single_link_3d_open_move_step_train_144149.json'
+    type: 'image_depth_text'
+
+  - path: '/HOME/scz0p9e/run/hexiangdong/vla/data_gen/vqa_tasks_folder/single_link_3d_rec_tasks_train_144149.json'
+    type: 'image_depth_text'
+
+  - path: '/HOME/scz0p9e/run/hexiangdong/vla/data_gen/vqa_tasks_folder/single_link_points_close_move_step_train_144149.json'
+    type: 'image_depth_text'
+
+  - path: '/HOME/scz0p9e/run/hexiangdong/vla/data_gen/vqa_tasks_folder/single_link_points_open_move_step_train_144149.json'
+    type: 'image_depth_text'
