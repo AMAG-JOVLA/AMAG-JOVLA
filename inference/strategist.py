@@ -9,7 +9,7 @@ import numpy as np
 class Strategist:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = clip.load("ViT-L/14@336px", device=device)
-    def compute_oci_scores(self, image_path: str, candidates: List[str]) -> str:
+    def compute_oci_scores(self, image_path: str, candidates: List[str]) -> List[tuple]:
 
         image = self.preprocess(Image.open(image_path)).unsqueeze(0).to(self.device)
         text_tokens = clip.tokenize(candidates).to(self.device)
@@ -24,10 +24,9 @@ class Strategist:
         similarity_scores = (image_features @ text_features.T).squeeze(0)
 
         scores = similarity_scores.tolist()
-        result = {candidates[i]: scores[i] for i in range(len(candidates))}
+        result = [(scores[i], candidates[i]) for i in range(len(candidates))]
 
-        best_prediction = max(result, key=result.get)
-        return best_prediction
+        return result
 
     def point_face_distance(self, face: List[float], point: List[float]):
         v1 = np.array(face[1]) - np.array(face[0])
@@ -40,7 +39,7 @@ class Strategist:
         distance = abs(A * x + B * y + C * z + D) / np.linalg.norm(normal)
         return distance
 
-    def compute_point_scores(self, point_list: List[List[float]], bounding_box: List[List[float]]) -> str:
+    def compute_point_scores(self, point_list: List[List[float]], bounding_box: List[List[float]]) -> List[tuple]:
         try:
             faces = [
                 [bounding_box[0], bounding_box[1], bounding_box[2], bounding_box[3]],
@@ -51,15 +50,15 @@ class Strategist:
                 [bounding_box[1], bounding_box[2], bounding_box[6], bounding_box[5]]
             ]
 
-            distance_list = [(sum(self.point_face_distance(face, point) for face in faces), index) for point, index in enumerate(point_list)]
+            distance_list = [(sum(self.point_face_distance(face, point) for face in faces), point) for index, point in enumerate(point_list)]
             distance_list.sort()
-            point = point_list[distance_list[0][1]]
+            result = [(score, json.dumps(point).replace(' ', '')) for score, point in distance_list]
 
-            return json.dumps(point).replace(' ', '')
+            return result
         except Exception as e:
-            return ''
+            return []
 
-    def compute_gripper_scores(self, gripper_list: List[List[float]], joint_type: str, axis: List[List[float]]) -> str:
+    def compute_gripper_scores(self, gripper_list: List[List[float]], joint_type: str, axis: List[List[float]]) -> List[tuple]:
         try:
             cosine_list = []
             axis = [
@@ -83,15 +82,13 @@ class Strategist:
                 ans = dot_product / (norm1 * norm2)
                 cosine_list.append((abs(ans), index))
             if len(cosine_list) == 0:
-                return ''
+                return []
             cosine_list.sort()
-            if joint_type == 'revolute':
-                result = gripper_list[cosine_list[0][1]]
-            else:
-                result = gripper_list[cosine_list[-1][1]]
-            return json.dumps(result).replace(' ', '')
+            if joint_type != 'revolute':
+                cosine_list.reverse()
+            return [[score, json.dumps(gripper).replace(' ', '')] for score, gripper in gripper_list]
         except Exception as e:
-            return ''
+            return []
 
 
 

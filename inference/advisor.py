@@ -32,30 +32,44 @@ def parse_steps(s):
     return result
 
 def get_one_result(image_path):
+    def search(image, result, steps):
+        if steps == 5:
+            move_step_result = model(PROMPT_LIST[steps].format(*result), image)
+            return parse_steps(move_step_result)
+        else:
+            inf_result = model(PROMPT_LIST[steps], image)
+            score_result = []
+            if steps == 0:
+                score_result = strategist.compute_oci_scores(image_path, inf_result.split(';'))
+            elif steps == 1:
+                result.pop()
+                result.append(inf_result)
+                return search(image, result, steps + 1)
+            elif steps == 2:
+                joint_type, axis = get_joint(inf_result)
+                result.append(joint_type)
+                result.append(axis)
+                return search(image, result, steps + 1)
+            elif steps == 3:
+                force_point_result = inf_result.split(';')
+                force_point_result = [ast.literal_eval(item) for item in force_point_result]
+                score_result = strategist.compute_point_scores(force_point_result, ast.literal_eval(result[0]))
+            elif steps == 4:
+                gripper_direction_result = inf_result.split(';')
+                gripper_direction_result = [ast.literal_eval(item) for item in gripper_direction_result]
+                score_result = strategist.compute_gripper_scores(gripper_direction_result, result[0], ast.literal_eval(result[1]))
+            for score, info in score_result:
+                result.append(info)
+                ans = search(image, result, steps + 1)
+                if ans != "":
+                    return ans
+                result.pop()
+            return ""
+
     image = Image.open(image_path)
 
-    oci_result = model(OCI_PROMPT, image)
-    oci_result = strategist.compute_oci_scores(image_path, oci_result.split(';'))
+    return search(image, [], 0)
 
-    position_result = model(POSITION_PROMPT.format(oci_result), image)
-
-    axis_result = model(POSITION_PROMPT.format(position_result), image)
-
-    joint_type, axis = get_joint(axis_result)
-    force_point_result = model(POSITION_PROMPT.format(position_result, joint_type, axis), image)
-    force_point_result = force_point_result.split(';')
-    force_point_result = [ast.literal_eval(item) for item in force_point_result]
-    force_point_result = strategist.compute_point_scores(force_point_result, ast.literal_eval(position_result))
-
-    gripper_direction_result = model(POSITION_PROMPT.format(position_result, joint_type, axis, force_point_result), image)
-    gripper_direction_result = gripper_direction_result.split(';')
-    gripper_direction_result = [ast.literal_eval(item) for item in gripper_direction_result]
-    gripper_direction_result = strategist.compute_gripper_scores(gripper_direction_result, joint_type, ast.literal_eval(axis))
-
-    move_step_result = model(POSITION_PROMPT.format(position_result, joint_type, axis, force_point_result, gripper_direction_result), image)
-    
-
-    return parse_steps(move_step_result)
 
 
 
